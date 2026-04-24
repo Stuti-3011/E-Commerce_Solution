@@ -10,5 +10,10 @@ namespace ECommerce.Domain.Entities
         public string Username { get; set; }
         public string PasswordHash { get; set; }
         public string Role { get; set; }
+        public string? Email { get; set; }
+        public string? Mobile { get; set; }
+        public bool IsVerified { get; set; } = false;
+        public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+
     }
 }

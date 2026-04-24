@@ -11,5 +11,6 @@ namespace ECommerce.Infrastructure.Data
         public AppDbContext(DbContextOptions dbContextOptions) : base(dbContextOptions) { }
         public DbSet<Product> Products { get; set; }
         public DbSet<User> Users { get; set; }
+
     }
 }

@@ -1,4 +1,5 @@
 using ECommerce.Application.Services;
+using ECommerce.Domain.Entities;
 using ECommerce.Domain.Interfaces;
 using ECommerce.Infrastructure.Data;
 using ECommerce.Infrastructure.Repositories;
@@ -17,6 +18,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IProductService, ProductService>();
+builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddScoped<IAuthService, AuthService>();
+
 var app = builder.Build();
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
