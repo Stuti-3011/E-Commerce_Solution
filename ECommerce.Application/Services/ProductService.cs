@@ -33,12 +33,36 @@ namespace ECommerce.Application.Services
 
         public async Task CreateProduct(ProductDto dto)
         {
+            string imagePath = null;
+
+            if (dto.Image != null)
+            {
+                var fileName = Guid.NewGuid() + Path.GetExtension(dto.Image.FileName);
+
+                var folderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images");
+
+                if (!Directory.Exists(folderPath))
+                {
+                    Directory.CreateDirectory(folderPath);
+                }
+
+                var fullPath = Path.Combine(folderPath, fileName);
+
+                using (var stream = new FileStream(fullPath, FileMode.Create))
+                {
+                    await dto.Image.CopyToAsync(stream);
+                }
+
+                imagePath = "/images/" + fileName;
+            }
+
             var product = new Product
             {
                 Name = dto.Name,
                 Price = dto.Price,
                 Description = dto.Description,
-                Stock = dto.Stock
+                Stock = dto.Stock,
+                ImageUrl = imagePath
             };
 
             await _repo.AddAsync(product);
