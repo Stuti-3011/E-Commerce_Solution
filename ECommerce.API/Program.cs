@@ -16,6 +16,8 @@ builder.Services.AddSwaggerGen();
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlServer(builder.Configuration.GetConnectionString("DefaultConnection")));
+builder.Services.AddScoped<IAddressRepository, AddressRepository>();
+builder.Services.AddScoped<IAddressService, AddressService>();
 builder.Services.AddScoped<IWishlistRepository, WishlistRepository>();
 builder.Services.AddScoped<IWishlistService, WishlistService>();
 builder.Services.AddScoped<ICartRepository, CartRepository>();

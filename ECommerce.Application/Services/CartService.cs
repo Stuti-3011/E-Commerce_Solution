@@ -30,6 +30,11 @@ namespace ECommerce.Application.Services
             return await _repo.GetCart(username);
         }
 
+        public async Task UpdateQuantity(int id, int quantity)
+        {
+            await _repo.UpdateQuantity(id, quantity);
+        }
+
         public async Task RemoveFromCart(int id)
         {
             await _repo.RemoveFromCart(id);

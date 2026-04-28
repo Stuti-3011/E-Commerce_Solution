@@ -32,6 +32,13 @@ namespace ECommerce.API.Controllers
             return Ok(await _service.GetCart(username));
         }
 
+        [HttpPut("{id}")]
+        public async Task<IActionResult> UpdateQuantity(int id, UpdateCartQuantityDto dto)
+        {
+            await _service.UpdateQuantity(id, dto.Quantity);
+            return Ok("Cart quantity updated");
+        }
+
         [HttpDelete("{id}")]
         public async Task<IActionResult> RemoveFromCart(int id)
         {

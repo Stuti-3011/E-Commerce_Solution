@@ -9,6 +9,7 @@ namespace ECommerce.Infrastructure.Data
     public class AppDbContext : DbContext
     {
         public AppDbContext(DbContextOptions dbContextOptions) : base(dbContextOptions) { }
+        public DbSet<Address> Addresses { get; set; }
         public DbSet<Product> Products { get; set; }
         public DbSet<CartItem> CartItems { get; set; }
         public DbSet<WishlistItem> WishlistItems { get; set; }

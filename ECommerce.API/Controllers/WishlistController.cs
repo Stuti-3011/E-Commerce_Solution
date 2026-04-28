@@ -16,13 +16,13 @@ namespace ECommerce.API.Controllers
 
         [HttpPost]
         public async Task<IActionResult> AddToWishlist([FromBody] int productId)
-        {
+        {   
             var username = User.Identity?.Name ?? "guest";
 
             await _service.AddToWishlist(username, productId);
             return Ok("Item added to wishlist");
         }
-
+          
         [HttpGet]
         public async Task<IActionResult> GetWishlist()
         {

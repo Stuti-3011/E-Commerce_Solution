@@ -39,6 +39,17 @@ namespace ECommerce.Infrastructure.Repositories
                 .ToListAsync();
         }
 
+        public async Task UpdateQuantity(int id, int quantity)
+        {
+            var item = await _context.CartItems.FindAsync(id);
+
+            if (item != null)
+            {
+                item.Quantity = quantity;
+                await _context.SaveChangesAsync();
+            }
+        }
+
         public async Task RemoveFromCart(int id)
         {
             var item = await _context.CartItems.FindAsync(id);

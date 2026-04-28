@@ -7,6 +7,7 @@ namespace ECommerce.Application.Services
     {
         Task AddToCart(string username, CartDto dto);
         Task<IEnumerable<CartItem>> GetCart(string username);
+        Task UpdateQuantity(int id, int quantity);
         Task RemoveFromCart(int id);
     }
 }
