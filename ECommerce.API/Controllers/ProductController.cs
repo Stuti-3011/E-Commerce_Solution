@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using System.ComponentModel.DataAnnotations;
 
 namespace ECommerce.API.Controllers
 {
@@ -34,17 +35,31 @@ namespace ECommerce.API.Controllers
         }
 
         [HttpPost]
-        public async Task<IActionResult> Create(ProductDto dto)
+        public async Task<IActionResult> Create([FromForm] ProductDto dto)
         {
-            await _service.CreateProduct(dto);
-            return Ok("Product Created");
+            try
+            {
+                await _service.CreateProduct(dto);
+                return Ok("Product Created");
+            }
+            catch (ValidationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpPut]
-        public async Task<IActionResult> Update(int id, ProductDto dto)
+        public async Task<IActionResult> Update(int id, [FromForm] ProductDto dto)
         {
-            await _service.UpdateProduct(id, dto);
-            return Ok("Product updated");
+            try
+            {
+                await _service.UpdateProduct(id, dto);
+                return Ok("Product updated");
+            }
+            catch (ValidationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpDelete]

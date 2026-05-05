@@ -17,7 +17,7 @@ namespace ECommerce.Infrastructure.Repositories
         public async Task AddToCart(CartItem item)
         {
             var existingItem = await _context.CartItems
-                .FirstOrDefaultAsync(x => x.Username == item.Username && x.ProductId == item.ProductId);
+                .FirstOrDefaultAsync(x => x.Username == item.Username && x.ProductId == item.ProductId && x.SelectedSize == item.SelectedSize);
 
             if (existingItem != null)
             {
@@ -26,7 +26,7 @@ namespace ECommerce.Infrastructure.Repositories
             else
             {
                 await _context.CartItems.AddAsync(item);
-            }
+            }      
 
             await _context.SaveChangesAsync();
         }
@@ -35,6 +35,9 @@ namespace ECommerce.Infrastructure.Repositories
         {
             return await _context.CartItems
                 .Include(x => x.Product)
+                .ThenInclude(product => product.ProductImages)
+                .Include(x => x.Product)
+                .ThenInclude(product => product.Sizes)
                 .Where(x => x.Username == username)
                 .ToListAsync();
         }

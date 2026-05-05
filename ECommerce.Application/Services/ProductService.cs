@@ -1,14 +1,15 @@
-﻿using ECommerce.Application.DTOs;
+using ECommerce.Application.DTOs;
 using ECommerce.Domain.Entities;
 using ECommerce.Domain.Interfaces;
-using System;
-using System.Collections.Generic;
-using System.Text;
+using Microsoft.AspNetCore.Http;
+using System.ComponentModel.DataAnnotations;
+using System.Linq;
 
 namespace ECommerce.Application.Services
 {
     public class ProductService : IProductService
     {
+        private const int MaxImages = 6;
         private readonly IProductRepository _repo;
 
         public ProductService(IProductRepository repo)
@@ -26,43 +27,39 @@ namespace ECommerce.Application.Services
             var product = await _repo.GetByIdAsync(id);
 
             if (product == null)
+            {
                 throw new Exception("Product not found");
+            }
 
             return product;
         }
 
         public async Task CreateProduct(ProductDto dto)
         {
-            string imagePath = null;
+            ValidateProduct(dto, requireImages: true);
 
-            if (dto.Image != null)
-            {
-                var fileName = Guid.NewGuid() + Path.GetExtension(dto.Image.FileName);
-
-                var folderPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot/images");
-
-                if (!Directory.Exists(folderPath))
-                {
-                    Directory.CreateDirectory(folderPath);
-                }
-
-                var fullPath = Path.Combine(folderPath, fileName);
-
-                using (var stream = new FileStream(fullPath, FileMode.Create))
-                {
-                    await dto.Image.CopyToAsync(stream);
-                }
-
-                imagePath = "/images/" + fileName;
-            }
+            var sizes = NormalizeSizes(dto.Sizes);
+            var savedImages = await SaveImages(dto.Images);
+            var primaryIndex = NormalizePrimaryIndex(dto.PrimaryImageIndex, savedImages.Count);
 
             var product = new Product
             {
-                Name = dto.Name,
+                Name = dto.Name.Trim(),
                 Price = dto.Price,
-                Description = dto.Description,
+                Description = dto.Description?.Trim(),
                 Stock = dto.Stock,
-                ImageUrl = imagePath
+                ImageUrl = savedImages[primaryIndex],
+                ProductImages = savedImages.Select((path, index) => new ProductImage
+                {
+                    ImageUrl = path,
+                    DisplayOrder = index,
+                    IsPrimary = index == primaryIndex
+                }).ToList(),
+                Sizes = sizes.Select((size, index) => new ProductSize
+                {
+                    Size = size,
+                    DisplayOrder = index
+                }).ToList()
             };
 
             await _repo.AddAsync(product);
@@ -73,12 +70,48 @@ namespace ECommerce.Application.Services
             var product = await _repo.GetByIdAsync(id);
 
             if (product == null)
+            {
                 throw new Exception("Product not found");
+            }
 
-            product.Name = dto.Name;
+            ValidateProduct(dto, requireImages: product.ProductImages.Count == 0 && string.IsNullOrWhiteSpace(product.ImageUrl));
+
+            product.Name = dto.Name.Trim();
             product.Price = dto.Price;
-            product.Description = dto.Description;
+            product.Description = dto.Description?.Trim();
             product.Stock = dto.Stock;
+
+            var sizes = NormalizeSizes(dto.Sizes);
+            product.Sizes.Clear();
+            foreach (var size in sizes.Select((value, index) => new ProductSize
+            {
+                Size = value,
+                DisplayOrder = index
+            }))
+            {
+                product.Sizes.Add(size);
+            }
+
+            if (dto.Images.Count > 0)
+            {
+                DeleteProductImages(product);
+
+                var savedImages = await SaveImages(dto.Images);
+                var primaryIndex = NormalizePrimaryIndex(dto.PrimaryImageIndex, savedImages.Count);
+
+                product.ImageUrl = savedImages[primaryIndex];
+                product.ProductImages.Clear();
+
+                foreach (var image in savedImages.Select((path, index) => new ProductImage
+                {
+                    ImageUrl = path,
+                    DisplayOrder = index,
+                    IsPrimary = index == primaryIndex
+                }))
+                {
+                    product.ProductImages.Add(image);
+                }
+            }
 
             await _repo.UpdateAsync(product);
         }
@@ -88,9 +121,116 @@ namespace ECommerce.Application.Services
             var product = await _repo.GetByIdAsync(id);
 
             if (product == null)
+            {
                 throw new Exception("Product not found");
+            }
 
+            DeleteProductImages(product);
             await _repo.DeleteAsync(id);
+        }
+
+        private static void ValidateProduct(ProductDto dto, bool requireImages)
+        {
+            if (string.IsNullOrWhiteSpace(dto.Name))
+            {
+                throw new ValidationException("Product name is required.");
+            }
+
+            if (dto.Price <= 0)
+            {
+                throw new ValidationException("Product price must be greater than zero.");
+            }
+
+            if (dto.Stock < 0)
+            {
+                throw new ValidationException("Product stock cannot be negative.");
+            }
+
+            if (dto.Images.Count > MaxImages)
+            {
+                throw new ValidationException($"You can upload up to {MaxImages} images per product.");
+            }
+
+            if (requireImages && dto.Images.Count == 0)
+            {
+                throw new ValidationException("At least one product image is required.");
+            }
+        }
+
+        private static List<string> NormalizeSizes(IEnumerable<string> sizes)
+        {
+            return sizes
+                .Select(size => size?.Trim())
+                .Where(size => !string.IsNullOrWhiteSpace(size))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .Cast<string>()
+                .ToList();
+        }
+
+        private static int NormalizePrimaryIndex(int primaryImageIndex, int imageCount)
+        {
+            if (imageCount == 0)
+            {
+                return 0;
+            }
+
+            return primaryImageIndex >= 0 && primaryImageIndex < imageCount ? primaryImageIndex : 0;
+        }
+
+        private static string GetImageDirectory()
+        {
+            return Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "images");
+        }
+
+        private async Task<List<string>> SaveImages(IEnumerable<IFormFile> images)
+        {
+            var imageDirectory = GetImageDirectory();
+
+            if (!Directory.Exists(imageDirectory))
+            {
+                Directory.CreateDirectory(imageDirectory);
+            }
+
+            var savedImages = new List<string>();
+
+            foreach (var image in images)
+            {
+                var fileName = $"{Guid.NewGuid()}{Path.GetExtension(image.FileName)}";
+                var fullPath = Path.Combine(imageDirectory, fileName);
+
+                using var stream = new FileStream(fullPath, FileMode.Create);
+                await image.CopyToAsync(stream);
+
+                savedImages.Add($"/images/{fileName}");
+            }
+
+            return savedImages;
+        }
+
+        private static void DeleteProductImages(Product product)
+        {
+            var imagePaths = product.ProductImages.Select(image => image.ImageUrl).ToList();
+
+            if (imagePaths.Count == 0 && !string.IsNullOrWhiteSpace(product.ImageUrl))
+            {
+                imagePaths.Add(product.ImageUrl);
+            }
+
+            foreach (var imagePath in imagePaths.Distinct(StringComparer.OrdinalIgnoreCase))
+            {
+                if (string.IsNullOrWhiteSpace(imagePath))
+                {
+                    continue;
+                }
+
+                var relativePath = imagePath.TrimStart('/').Replace('/', Path.DirectorySeparatorChar);
+                var fullPath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", relativePath);
+
+                if (File.Exists(fullPath))
+                {
+                    File.Delete(fullPath);
+                }
+            }
         }
     }
 }

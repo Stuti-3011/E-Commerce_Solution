@@ -11,6 +11,8 @@ namespace ECommerce.Application.DTOs
         public decimal Price { get; set; }
         public string Description { get; set; }
         public int Stock { get; set; }
-        public IFormFile Image { get; set; }
+        public List<IFormFile> Images { get; set; } = new List<IFormFile>();
+        public int PrimaryImageIndex { get; set; }
+        public List<string> Sizes { get; set; } = new List<string>();
     }
 }

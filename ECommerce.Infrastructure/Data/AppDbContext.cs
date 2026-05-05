@@ -11,9 +11,31 @@ namespace ECommerce.Infrastructure.Data
         public AppDbContext(DbContextOptions dbContextOptions) : base(dbContextOptions) { }
         public DbSet<Address> Addresses { get; set; }
         public DbSet<Product> Products { get; set; }
+        public DbSet<ProductImage> ProductImages { get; set; }
+        public DbSet<ProductSize> ProductSizes { get; set; }
         public DbSet<CartItem> CartItems { get; set; }
         public DbSet<WishlistItem> WishlistItems { get; set; }
         public DbSet<User> Users { get; set; }
 
+        protected override void OnModelCreating(ModelBuilder modelBuilder)
+        {
+            base.OnModelCreating(modelBuilder);
+
+            modelBuilder.Entity<ProductImage>()
+                .HasOne(image => image.Product)
+                .WithMany(product => product.ProductImages)
+                .HasForeignKey(image => image.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Product>()
+                .Property(product => product.Price)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<ProductSize>()
+                .HasOne(size => size.Product)
+                .WithMany(product => product.Sizes)
+                .HasForeignKey(size => size.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+        }
     }
 }

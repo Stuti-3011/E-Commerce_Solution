@@ -17,5 +17,7 @@ namespace ECommerce.Domain.Entities
         public string Description { get; set; }
         public int Stock { get; set; }
         public string ImageUrl { get; set; }
+        public ICollection<ProductImage> ProductImages { get; set; } = new List<ProductImage>();
+        public ICollection<ProductSize> Sizes { get; set; } = new List<ProductSize>();
     }
 }

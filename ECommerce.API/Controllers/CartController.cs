@@ -1,6 +1,7 @@
 using ECommerce.Application.DTOs;
 using ECommerce.Application.Services;
 using Microsoft.AspNetCore.Mvc;
+using System.ComponentModel.DataAnnotations;
 
 namespace ECommerce.API.Controllers
 {
@@ -20,8 +21,15 @@ namespace ECommerce.API.Controllers
         {
             var username = User.Identity?.Name ?? "guest";
 
-            await _service.AddToCart(username, dto);
-            return Ok("Item added to cart");
+            try
+            {
+                await _service.AddToCart(username, dto);
+                return Ok("Item added to cart");
+            }
+            catch (ValidationException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
 
         [HttpGet]

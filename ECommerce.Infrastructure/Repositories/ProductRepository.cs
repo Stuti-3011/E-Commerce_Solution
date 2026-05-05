@@ -4,6 +4,7 @@ using ECommerce.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 
 namespace ECommerce.Infrastructure.Repositories
@@ -19,12 +20,18 @@ namespace ECommerce.Infrastructure.Repositories
 
         public async Task<IEnumerable<Product>> GetAllAsync()
         {
-            return await _context.Products.ToListAsync();
+            return await _context.Products
+                .Include(product => product.ProductImages.OrderBy(image => image.DisplayOrder))
+                .Include(product => product.Sizes.OrderBy(size => size.DisplayOrder))
+                .ToListAsync();
         }
 
         public async Task<Product> GetByIdAsync(int id)
         {
-            return await _context.Products.FindAsync(id);
+            return await _context.Products
+                .Include(product => product.ProductImages.OrderBy(image => image.DisplayOrder))
+                .Include(product => product.Sizes.OrderBy(size => size.DisplayOrder))
+                .FirstOrDefaultAsync(product => product.Id == id);
         }
 
         public async Task AddAsync(Product product)
