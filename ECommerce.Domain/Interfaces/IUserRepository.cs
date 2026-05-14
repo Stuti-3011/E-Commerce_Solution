@@ -8,6 +8,7 @@ namespace ECommerce.Domain.Interfaces
     public interface IUserRepository
     {
         User GetByUsername(string username);
+        User? GetByIdentity(string phoneOrEmail);
         void Add(User user);
         void Save();
     }

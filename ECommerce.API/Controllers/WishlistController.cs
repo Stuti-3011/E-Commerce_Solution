@@ -18,7 +18,7 @@ namespace ECommerce.API.Controllers
         public async Task<IActionResult> AddToWishlist([FromBody] int productId)
         {   
             var username = User.Identity?.Name ?? "guest";
-
+                
             await _service.AddToWishlist(username, productId);
             return Ok("Item added to wishlist");
         }

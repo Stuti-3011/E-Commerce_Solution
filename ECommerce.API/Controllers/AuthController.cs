@@ -1,13 +1,7 @@
-﻿using ECommerce.Application.DTOs;
+using ECommerce.Application.DTOs;
 using ECommerce.Application.Services;
 using ECommerce.Domain.Entities;
-using ECommerce.Infrastructure.Data;
-using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.IdentityModel.Tokens;
-using System.IdentityModel.Tokens.Jwt;
-using System.Security.Claims;
-using System.Text;
 
 namespace ECommerce.API.Controllers
 {
@@ -16,17 +10,15 @@ namespace ECommerce.API.Controllers
     public class AuthController : ControllerBase
     {
         private readonly IAuthService _service;
-        private readonly IConfiguration _config;
 
-        public AuthController(IAuthService service, IConfiguration config)
+        public AuthController(IAuthService service)
         {
             _service = service;
-            _config = config;
         }
 
         [HttpPost("register")]
         public IActionResult Register(RegisterDto dto)
-        {        
+        {
             try
             {
                 var result = _service.Register(dto);
@@ -46,37 +38,37 @@ namespace ECommerce.API.Controllers
             if (user == null)
                 return Unauthorized("Invalid credentials");
 
-            var token = GenerateToken(user);
+            var token = _service.GenerateJwtToken(user);
 
             return Ok(new { token, role = user.Role });
         }
-        /*        [HttpGet("generate-hash")]
-        public IActionResult GenerateHash()
-        {
-            var hash = BCrypt.Net.BCrypt.HashPassword("Admin@123");
-            return Ok(hash);
-        }*/
-        private string GenerateToken(User user)
-        {
-            var key = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(_config["Jwt:Key"])
-            );
 
-            var creds = new SigningCredentials(key, SecurityAlgorithms.HmacSha256);
-
-            var claims = new[]
+        [HttpPost("send-otp")]
+        public async Task<IActionResult> SendOtp(SendOtpRequestDto dto)
+        {
+            try
             {
-            new Claim(ClaimTypes.Name, user.Username),
-            new Claim(ClaimTypes.Role, user.Role)
-        };
-
-            var token = new JwtSecurityToken(
-                claims: claims,
-                expires: DateTime.UtcNow.AddHours(2),
-                signingCredentials: creds
-            );
-
-            return new JwtSecurityTokenHandler().WriteToken(token);
+                await _service.SendOtpAsync(dto);
+                return Ok(new { message = "OTP sent successfully." });
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
         }
-    }       
+
+        [HttpPost("verify-otp")]
+        public async Task<IActionResult> VerifyOtp(VerifyOtpRequestDto dto)
+        {
+            try
+            {
+                var result = await _service.VerifyOtpAsync(dto);
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+        }
+    }
 }

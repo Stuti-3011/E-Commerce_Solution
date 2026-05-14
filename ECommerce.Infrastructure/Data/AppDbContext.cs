@@ -16,6 +16,8 @@ namespace ECommerce.Infrastructure.Data
         public DbSet<CartItem> CartItems { get; set; }
         public DbSet<WishlistItem> WishlistItems { get; set; }
         public DbSet<User> Users { get; set; }
+        public DbSet<Order> Orders { get; set; }
+        public DbSet<Payment> Payments { get; set; }
 
         protected override void OnModelCreating(ModelBuilder modelBuilder)
         {
@@ -35,6 +37,20 @@ namespace ECommerce.Infrastructure.Data
                 .HasOne(size => size.Product)
                 .WithMany(product => product.Sizes)
                 .HasForeignKey(size => size.ProductId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            modelBuilder.Entity<Order>()
+                .Property(order => order.Amount)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Payment>()
+                .Property(payment => payment.Amount)
+                .HasPrecision(18, 2);
+
+            modelBuilder.Entity<Payment>()
+                .HasOne(payment => payment.Order)
+                .WithMany(order => order.Payments)
+                .HasForeignKey(payment => payment.OrderId)
                 .OnDelete(DeleteBehavior.Cascade);
         }
     }

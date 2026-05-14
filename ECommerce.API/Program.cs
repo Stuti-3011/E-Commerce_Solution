@@ -3,6 +3,7 @@ using ECommerce.Domain.Entities;
 using ECommerce.Domain.Interfaces;
 using ECommerce.Infrastructure.Data;
 using ECommerce.Infrastructure.Repositories;
+using ECommerce.Infrastructure.Services;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
@@ -22,10 +23,16 @@ builder.Services.AddScoped<IWishlistRepository, WishlistRepository>();
 builder.Services.AddScoped<IWishlistService, WishlistService>();
 builder.Services.AddScoped<ICartRepository, CartRepository>();
 builder.Services.AddScoped<ICartService, CartService>();
+builder.Services.AddScoped<IPaymentRepository, PaymentRepository>();
 builder.Services.AddScoped<IProductRepository, ProductRepository>();
 builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IUserRepository, UserRepository>();
+builder.Services.AddSingleton<IOtpStore, InMemoryOtpStore>();
+builder.Services.AddScoped<IOtpSender, DevelopmentOtpSender>();
 builder.Services.AddScoped<IAuthService, AuthService>();
+builder.Services.Configure<SmtpOptions>(builder.Configuration.GetSection("Smtp"));
+builder.Services.Configure<RazorpayOptions>(builder.Configuration.GetSection("Razorpay"));
+builder.Services.AddHttpClient<IPaymentService, PaymentService>();
 builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     .AddJwtBearer(options =>
     {

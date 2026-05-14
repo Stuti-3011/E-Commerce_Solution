@@ -15,7 +15,7 @@ namespace ECommerce.Infrastructure.Repositories
         }
 
         public async Task AddToCart(CartItem item)
-        {
+        :{
             var existingItem = await _context.CartItems
                 .FirstOrDefaultAsync(x => x.Username == item.Username && x.ProductId == item.ProductId && x.SelectedSize == item.SelectedSize);
 
@@ -62,6 +62,60 @@ namespace ECommerce.Infrastructure.Repositories
                 _context.CartItems.Remove(item);
                 await _context.SaveChangesAsync();
             }
+        }
+
+        public async Task ClearCart(string username)
+        {
+            var items = await _context.CartItems
+                .Where(item => item.Username == username)
+                .ToListAsync();
+
+            if (items.Count == 0)
+            {
+                return;
+            }
+
+            _context.CartItems.RemoveRange(items);
+            await _context.SaveChangesAsync();
+        }
+
+        public async Task MergeCartAsync(string sourceUsername, string destinationUsername)
+        {
+            if (string.IsNullOrWhiteSpace(sourceUsername) ||
+                string.IsNullOrWhiteSpace(destinationUsername) ||
+                string.Equals(sourceUsername, destinationUsername, StringComparison.Ordinal))
+            {
+                return;
+            }
+
+            var sourceItems = await _context.CartItems
+                .Where(item => item.Username == sourceUsername)
+                .ToListAsync();
+
+            if (sourceItems.Count == 0)
+            {
+                return;
+            }
+
+            foreach (var sourceItem in sourceItems)
+            {
+                var destinationItem = await _context.CartItems.FirstOrDefaultAsync(item =>
+                    item.Username == destinationUsername &&
+                    item.ProductId == sourceItem.ProductId &&
+                    item.SelectedSize == sourceItem.SelectedSize);
+
+                if (destinationItem != null)
+                {
+                    destinationItem.Quantity += sourceItem.Quantity;
+                    _context.CartItems.Remove(sourceItem);
+                }
+                else
+                {
+                    sourceItem.Username = destinationUsername;
+                }
+            }
+
+            await _context.SaveChangesAsync();
         }
     }
 }

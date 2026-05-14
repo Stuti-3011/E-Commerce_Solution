@@ -21,6 +21,14 @@ namespace ECommerce.Infrastructure.Repositories
             return _context.Users.FirstOrDefault(x => x.Username == username);
         }
 
+        public User? GetByIdentity(string phoneOrEmail)
+        {
+            return _context.Users.FirstOrDefault(x =>
+                x.Username == phoneOrEmail ||
+                x.Email == phoneOrEmail ||
+                x.Mobile == phoneOrEmail);
+        }
+
         public void Add(User user)
         {
             _context.Users.Add(user);

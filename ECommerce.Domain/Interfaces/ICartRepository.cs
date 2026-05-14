@@ -8,5 +8,7 @@ namespace ECommerce.Domain.Interfaces
         Task<IEnumerable<CartItem>> GetCart(string username);
         Task UpdateQuantity(int id, int quantity);
         Task RemoveFromCart(int id);
+        Task ClearCart(string username);
+        Task MergeCartAsync(string sourceUsername, string destinationUsername);
     }
 }
