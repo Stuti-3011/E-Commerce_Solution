@@ -11,6 +11,7 @@ namespace ECommerce.Domain.Entities
         public int Id { get; set; }
         public int ProductId { get; set; }
         public string Size { get; set; }
+        public int StockQuantity { get; set; }
         public int DisplayOrder { get; set; }
         [JsonIgnore]
         public Product Product { get; set; }

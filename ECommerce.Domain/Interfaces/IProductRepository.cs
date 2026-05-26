@@ -12,5 +12,7 @@ namespace ECommerce.Domain.Interfaces
         Task AddAsync(Product product);
         Task UpdateAsync(Product product);
         Task DeleteAsync(int id);
+        Task ValidateCartStockAsync(IEnumerable<CartItem> cartItems);
+        Task ReduceStockForCartAsync(IEnumerable<CartItem> cartItems);
     }
 }

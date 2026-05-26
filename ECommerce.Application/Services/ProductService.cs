@@ -38,7 +38,7 @@ namespace ECommerce.Application.Services
         {
             ValidateProduct(dto, requireImages: true);
 
-            var sizes = NormalizeSizes(dto.Sizes);
+            var sizeStocks = NormalizeSizeStocks(dto);
             var savedImages = await SaveImages(dto.Images);
             var primaryIndex = NormalizePrimaryIndex(dto.PrimaryImageIndex, savedImages.Count);
 
@@ -47,7 +47,7 @@ namespace ECommerce.Application.Services
                 Name = dto.Name.Trim(),
                 Price = dto.Price,
                 Description = dto.Description?.Trim(),
-                Stock = dto.Stock,
+                Stock = sizeStocks.Count > 0 ? sizeStocks.Sum(size => size.StockQuantity) : dto.Stock,
                 ImageUrl = savedImages[primaryIndex],
                 ProductImages = savedImages.Select((path, index) => new ProductImage
                 {
@@ -55,9 +55,10 @@ namespace ECommerce.Application.Services
                     DisplayOrder = index,
                     IsPrimary = index == primaryIndex
                 }).ToList(),
-                Sizes = sizes.Select((size, index) => new ProductSize
+                Sizes = sizeStocks.Select((size, index) => new ProductSize
                 {
-                    Size = size,
+                    Size = size.Size,
+                    StockQuantity = size.StockQuantity,
                     DisplayOrder = index
                 }).ToList()
             };
@@ -79,13 +80,14 @@ namespace ECommerce.Application.Services
             product.Name = dto.Name.Trim();
             product.Price = dto.Price;
             product.Description = dto.Description?.Trim();
-            product.Stock = dto.Stock;
+            var sizeStocks = NormalizeSizeStocks(dto);
+            product.Stock = sizeStocks.Count > 0 ? sizeStocks.Sum(size => size.StockQuantity) : dto.Stock;
 
-            var sizes = NormalizeSizes(dto.Sizes);
             product.Sizes.Clear();
-            foreach (var size in sizes.Select((value, index) => new ProductSize
+            foreach (var size in sizeStocks.Select((value, index) => new ProductSize
             {
-                Size = value,
+                Size = value.Size,
+                StockQuantity = value.StockQuantity,
                 DisplayOrder = index
             }))
             {
@@ -146,6 +148,12 @@ namespace ECommerce.Application.Services
                 throw new ValidationException("Product stock cannot be negative.");
             }
 
+            var sizeStocks = NormalizeSizeStocks(dto);
+            if (sizeStocks.Any(size => size.StockQuantity < 0))
+            {
+                throw new ValidationException("Size stock cannot be negative.");
+            }
+
             if (dto.Images.Count > MaxImages)
             {
                 throw new ValidationException($"You can upload up to {MaxImages} images per product.");
@@ -157,13 +165,31 @@ namespace ECommerce.Application.Services
             }
         }
 
-        private static List<string> NormalizeSizes(IEnumerable<string> sizes)
+        private static List<ProductSizeDto> NormalizeSizeStocks(ProductDto dto)
         {
-            return sizes
+            if (dto.SizeStocks.Count > 0)
+            {
+                return dto.SizeStocks
+                    .Where(size => !string.IsNullOrWhiteSpace(size.Size))
+                    .Select(size => new ProductSizeDto
+                    {
+                        Size = size.Size.Trim().ToUpperInvariant(),
+                        StockQuantity = size.StockQuantity
+                    })
+                    .GroupBy(size => size.Size, StringComparer.OrdinalIgnoreCase)
+                    .Select(group => group.First())
+                    .ToList();
+            }
+
+            return dto.Sizes
                 .Select(size => size?.Trim())
                 .Where(size => !string.IsNullOrWhiteSpace(size))
                 .Distinct(StringComparer.OrdinalIgnoreCase)
-                .Cast<string>()
+                .Select(size => new ProductSizeDto
+                {
+                    Size = size!.ToUpperInvariant(),
+                    StockQuantity = dto.Stock
+                })
                 .ToList();
         }
 

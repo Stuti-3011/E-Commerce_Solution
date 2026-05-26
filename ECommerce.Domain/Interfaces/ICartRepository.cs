@@ -6,6 +6,7 @@ namespace ECommerce.Domain.Interfaces
     {
         Task AddToCart(CartItem item);
         Task<IEnumerable<CartItem>> GetCart(string username);
+        Task<CartItem?> GetCartItemByIdAsync(int id);
         Task UpdateQuantity(int id, int quantity);
         Task RemoveFromCart(int id);
         Task ClearCart(string username);

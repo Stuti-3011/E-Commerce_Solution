@@ -14,6 +14,16 @@ namespace ECommerce.Infrastructure.Repositories
             _context = context;
         }
 
+        public async Task<CartItem?> GetCartItemByIdAsync(int id)
+        {
+            return await _context.CartItems
+                .Include(x => x.Product)  
+                    .ThenInclude(product => product.ProductImages)
+                .Include(x => x.Product)
+                    .ThenInclude(product => product.Sizes)
+                .FirstOrDefaultAsync(x => x.Id == id);
+        }
+
         public async Task AddToCart(CartItem item)
         {
             var existingItem = await _context.CartItems

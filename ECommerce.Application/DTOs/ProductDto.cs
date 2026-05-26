@@ -14,5 +14,6 @@ namespace ECommerce.Application.DTOs
         public List<IFormFile> Images { get; set; } = new List<IFormFile>();
         public int PrimaryImageIndex { get; set; }
         public List<string> Sizes { get; set; } = new List<string>();
+        public List<ProductSizeDto> SizeStocks { get; set; } = new List<ProductSizeDto>();
     }
 }

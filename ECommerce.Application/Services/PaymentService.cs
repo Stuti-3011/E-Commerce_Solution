@@ -17,6 +17,7 @@ namespace ECommerce.Application.Services
         private const string FailedStatus = "Failed";
 
         private readonly ICartRepository _cartRepository;
+        private readonly IProductRepository _productRepository;
         private readonly IUserRepository _userRepository;
         private readonly IPaymentRepository _paymentRepository;
         private readonly HttpClient _httpClient;
@@ -24,12 +25,14 @@ namespace ECommerce.Application.Services
 
         public PaymentService(
             ICartRepository cartRepository,
+            IProductRepository productRepository,
             IUserRepository userRepository,
             IPaymentRepository paymentRepository,
             HttpClient httpClient,
             IOptions<RazorpayOptions> razorpayOptions)
         {
             _cartRepository = cartRepository;
+            _productRepository = productRepository;
             _userRepository = userRepository;
             _paymentRepository = paymentRepository;
             _httpClient = httpClient;
@@ -75,6 +78,8 @@ namespace ECommerce.Application.Services
             {
                 throw new ValidationException("Your cart is empty.");
             }
+
+            await _productRepository.ValidateCartStockAsync(cartItems);
 
             var amount = cartItems.Sum(item => item.Product.Price * item.Quantity);
 
@@ -203,9 +208,47 @@ namespace ECommerce.Application.Services
 
             var isValid = VerifyPaymentSignature(dto.RazorpayOrderId, dto.RazorpayPaymentId, dto.RazorpaySignature);
 
-            order.Status = isValid ? PaidStatus : FailedStatus;
-            await _paymentRepository.UpdateOrderAsync(order);
+            if (!isValid)
+            {
+                order.Status = FailedStatus;
+                await _paymentRepository.UpdateOrderAsync(order);
+                await SavePaymentAsync(existingPayment, order, dto, FailedStatus);
 
+                return new PaymentResultDto
+                {
+                    Success = false,
+                    Status = FailedStatus,
+                    Message = "Payment signature verification failed."
+                };
+            }
+
+            try
+            {
+                var cartItems = (await _cartRepository.GetCart(username)).ToList();
+                await _productRepository.ReduceStockForCartAsync(cartItems);
+                order.Status = PaidStatus;
+                await _paymentRepository.UpdateOrderAsync(order);
+                await SavePaymentAsync(existingPayment, order, dto, PaidStatus);
+                await _cartRepository.ClearCart(username);
+            }
+            catch (ValidationException)
+            {
+                order.Status = FailedStatus;
+                await _paymentRepository.UpdateOrderAsync(order);
+                await SavePaymentAsync(existingPayment, order, dto, FailedStatus);
+                throw;
+            }
+
+            return new PaymentResultDto
+            {
+                Success = true,
+                Status = PaidStatus,
+                Message = "Payment verified successfully."
+            };
+        }
+
+        private async Task SavePaymentAsync(Payment? existingPayment, Order order, VerifyPaymentDto dto, string status)
+        {
             if (existingPayment == null)
             {
                 await _paymentRepository.AddPaymentAsync(new Payment
@@ -214,36 +257,16 @@ namespace ECommerce.Application.Services
                     RazorpayPaymentId = dto.RazorpayPaymentId,
                     RazorpayOrderId = dto.RazorpayOrderId,
                     Amount = order.Amount,
-                    Status = order.Status,
+                    Status = status,
                     CreatedAt = DateTime.UtcNow
                 });
-            }
-            else
-            {
-                existingPayment.Status = order.Status;
-                existingPayment.RazorpayOrderId = dto.RazorpayOrderId;
-                existingPayment.Amount = order.Amount;
-                await _paymentRepository.UpdatePaymentAsync(existingPayment);
+                return;
             }
 
-            if (isValid)
-            {
-                await _cartRepository.ClearCart(username);
-
-                return new PaymentResultDto
-                {
-                    Success = true,
-                    Status = PaidStatus,
-                    Message = "Payment verified successfully."
-                };
-            }
-
-            return new PaymentResultDto
-            {
-                Success = false,
-                Status = FailedStatus,
-                Message = "Payment signature verification failed."
-            };
+            existingPayment.Status = status;
+            existingPayment.RazorpayOrderId = dto.RazorpayOrderId;
+            existingPayment.Amount = order.Amount;
+            await _paymentRepository.UpdatePaymentAsync(existingPayment);
         }
     }
 }
